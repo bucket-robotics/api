@@ -1,0 +1,288 @@
+{
+  "swagger": "2.0",
+  "info": {
+    "title": "Bucket Robotics API",
+    "version": "1.0.0",
+    "contact": {
+      "name": "Bucket Robotics",
+      "url": "https://bucket.bot",
+      "email": "connect@bucket.bot"
+    },
+    "license": {
+      "name": "Apache-2.0",
+      "url": "https://github.com/bucket-robotics/api/blob/main/LICENSE"
+    }
+  },
+  "tags": [
+    {
+      "name": "DetectionService"
+    },
+    {
+      "name": "DeviceService"
+    }
+  ],
+  "consumes": [
+    "application/json"
+  ],
+  "produces": [
+    "application/json"
+  ],
+  "paths": {
+    "/v1/detection": {
+      "post": {
+        "summary": "Detect objects in an image.",
+        "operationId": "DetectionService_GetDetection",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1GetDetectionResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "includeImage",
+            "description": "Whether to include the image that the detections are from.",
+            "in": "query",
+            "required": false,
+            "type": "boolean"
+          }
+        ],
+        "tags": [
+          "DetectionService"
+        ]
+      }
+    },
+    "/v1/device": {
+      "post": {
+        "summary": "Get information describing the device.",
+        "operationId": "DeviceService_GetDeviceInfo",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1GetDeviceInfoResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "tags": [
+          "DeviceService"
+        ]
+      }
+    }
+  },
+  "definitions": {
+    "protobufAny": {
+      "type": "object",
+      "properties": {
+        "@type": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": {}
+    },
+    "rpcStatus": {
+      "type": "object",
+      "properties": {
+        "code": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "message": {
+          "type": "string"
+        },
+        "details": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/protobufAny"
+          }
+        }
+      }
+    },
+    "v1GetDetectionResponse": {
+      "type": "object",
+      "properties": {
+        "timestamp": {
+          "type": "string",
+          "format": "date-time",
+          "description": "The timestamp of the image the detections are from."
+        },
+        "workSurface": {
+          "$ref": "#/definitions/v1WorkSurface",
+          "description": "The detected work surface."
+        },
+        "objects": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1Object"
+          },
+          "description": "The objects detected in the image."
+        },
+        "imageJpeg": {
+          "type": "string",
+          "format": "byte",
+          "description": "The JPEG-encoded image the detections are from.\n\nThis field is only populated if `include_image` is `true` in the request."
+        }
+      },
+      "description": "Detections from an image."
+    },
+    "v1GetDeviceInfoResponse": {
+      "type": "object",
+      "properties": {
+        "serialNumber": {
+          "type": "string",
+          "example": "1234567890123",
+          "description": "The serial number of the device."
+        },
+        "softwareVersion": {
+          "type": "string",
+          "example": "30a0f5b",
+          "description": "The version of software the device is running."
+        },
+        "modelName": {
+          "type": "string",
+          "example": "Bucket Mini One",
+          "description": "The model name of the device."
+        }
+      }
+    },
+    "v1Object": {
+      "type": "object",
+      "properties": {
+        "type": {
+          "$ref": "#/definitions/v1ObjectType",
+          "example": "OBJECT_TYPE_PART",
+          "description": "The type of object detected."
+        },
+        "center": {
+          "$ref": "#/definitions/v1Point3D",
+          "description": "The detected center point of the top of the object relative to the camera."
+        },
+        "width": {
+          "type": "number",
+          "format": "float",
+          "example": 0.1,
+          "description": "The width of the object in meters."
+        },
+        "height": {
+          "type": "number",
+          "format": "float",
+          "example": 0.2,
+          "description": "The height of the object in meters."
+        },
+        "depth": {
+          "type": "number",
+          "format": "float",
+          "example": 0.3,
+          "description": "The depth of the object in meters."
+        },
+        "polygon2d": {
+          "$ref": "#/definitions/v1Polygon2D",
+          "description": "The 2D polygon of the object in the image."
+        },
+        "boundingBox2d": {
+          "$ref": "#/definitions/v1Polygon2D",
+          "description": "A polygon representing a 2D bounding box of the object in the image.\n\nThis polygon is not axis aligned and so the box will have a rotation."
+        }
+      },
+      "description": "An object, such as a steel sheet or a circuit board."
+    },
+    "v1ObjectType": {
+      "type": "string",
+      "enum": [
+        "OBJECT_TYPE_UNSPECIFIED",
+        "OBJECT_TYPE_PART"
+      ],
+      "default": "OBJECT_TYPE_UNSPECIFIED",
+      "description": "The coarse-grained classification type of a given object.\n\n - OBJECT_TYPE_UNSPECIFIED: Unknown object type.\n - OBJECT_TYPE_PART: A component, part, or similar object."
+    },
+    "v1Point2D": {
+      "type": "object",
+      "properties": {
+        "x": {
+          "type": "integer",
+          "format": "int32",
+          "example": 1024,
+          "description": "The x-coordinate is left to right where 0 is the left side of the image."
+        },
+        "y": {
+          "type": "integer",
+          "format": "int32",
+          "example": 1024,
+          "description": "The x-coordinate is top to bottom where 0 is the top side of the image."
+        }
+      },
+      "description": "A 2D point."
+    },
+    "v1Point3D": {
+      "type": "object",
+      "properties": {
+        "x": {
+          "type": "number",
+          "format": "float",
+          "example": 1.0,
+          "description": "The x-coordinate of the point - positive is right in the camera image."
+        },
+        "y": {
+          "type": "number",
+          "format": "float",
+          "example": 2.0,
+          "description": "The y-coordinate of the point - positive is down in the camera image."
+        },
+        "z": {
+          "type": "number",
+          "format": "float",
+          "example": 3.0,
+          "description": "The z-coordinate of the point - positive is forward relative to the camera."
+        }
+      },
+      "description": "A 3D point.\n\nThe Bucket vision system uses a right-handed coordinate system in metric units. For example\n`Point3D(x: 1.0, y: 2.0, z: 3.0)` is 1 meter right, 2 meters down, and 3 meters forward of the camera."
+    },
+    "v1Polygon2D": {
+      "type": "object",
+      "properties": {
+        "points": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1Point2D"
+          }
+        }
+      },
+      "description": "A closed 2D polygon."
+    },
+    "v1WorkSurface": {
+      "type": "object",
+      "properties": {
+        "center": {
+          "$ref": "#/definitions/v1Point3D",
+          "description": "The detected center point of the work surface relative to the camera."
+        },
+        "center2d": {
+          "$ref": "#/definitions/v1Point2D",
+          "description": "The center of the object in the image."
+        }
+      },
+      "description": "A work surface, such as a table or bench top."
+    }
+  },
+  "externalDocs": {
+    "description": "GitHub",
+    "url": "https://github.com/bucket-robotics/api"
+  }
+}

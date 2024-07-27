@@ -1,0 +1,138 @@
+// Bucket's detection API.
+
+syntax = "proto3";
+
+package bucket.v1;
+
+import "google/api/annotations.proto";
+import "google/protobuf/timestamp.proto";
+import "protoc-gen-openapiv2/options/annotations.proto";
+
+option go_package = "github.com/bucket-robotics/api";
+option java_package = "bot.bucket.v1";
+option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_swagger) = {
+  info: {
+    title: "Bucket Robotics API"
+    version: "1.0.0"
+    contact: {
+      name: "Bucket Robotics"
+      url: "https://bucket.bot"
+      email: "connect@bucket.bot"
+    }
+    license: {
+      name: "Apache-2.0"
+      url: "https://github.com/bucket-robotics/api/blob/main/LICENSE"
+    }
+  }
+  external_docs: {
+    url: "https://github.com/bucket-robotics/api"
+    description: "GitHub"
+  }
+};
+
+// The coarse-grained classification type of a given object.
+enum ObjectType {
+  // Unknown object type.
+  OBJECT_TYPE_UNSPECIFIED = 0;
+  // A component, part, or similar object.
+  OBJECT_TYPE_PART = 1;
+}
+
+// A 3D point.
+//
+// The Bucket vision system uses a right-handed coordinate system in metric units. For example
+// `Point3D(x: 1.0, y: 2.0, z: 3.0)` is 1 meter right, 2 meters down, and 3 meters forward of the camera.
+message Point3D {
+  // The x-coordinate of the point - positive is right in the camera image.
+  float x = 1 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {example: "1.0"}];
+  // The y-coordinate of the point - positive is down in the camera image.
+  float y = 2 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {example: "2.0"}];
+  // The z-coordinate of the point - positive is forward relative to the camera.
+  float z = 3 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {example: "3.0"}];
+}
+
+// A 2D point.
+message Point2D {
+  // The x-coordinate is left to right where 0 is the left side of the image.
+  int32 x = 1 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {example: "1024"}];
+  // The x-coordinate is top to bottom where 0 is the top side of the image.
+  int32 y = 2 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {example: "1024"}];
+}
+
+// A closed 2D polygon.
+message Polygon2D {
+  repeated Point2D points = 1;
+}
+
+// An object, such as a steel sheet or a circuit board.
+message Object {
+  // The type of object detected.
+  ObjectType type = 1 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {example: "\"OBJECT_TYPE_PART\""}];
+  // The detected center point of the top of the object relative to the camera.
+  Point3D center = 2;
+  // The width of the object in meters.
+  float width = 3 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {example: "0.1"}];
+  // The height of the object in meters.
+  float height = 4 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {example: "0.2"}];
+  // The depth of the object in meters.
+  float depth = 5 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {example: "0.3"}];
+  // The 2D polygon of the object in the image.
+  Polygon2D polygon_2d = 6;
+  // A polygon representing a 2D bounding box of the object in the image.
+  //
+  // This polygon is not axis aligned and so the box will have a rotation.
+  Polygon2D bounding_box_2d = 7;
+}
+
+// A work surface, such as a table or bench top.
+message WorkSurface {
+  // The detected center point of the work surface relative to the camera.
+  Point3D center = 1;
+  // The center of the object in the image.
+  Point2D center_2d = 2;
+}
+
+// Detection request.
+message GetDetectionRequest {
+  // Whether to include the image that the detections are from.
+  bool include_image = 1;
+}
+
+// Detections from an image.
+message GetDetectionResponse {
+  // The timestamp of the image the detections are from.
+  google.protobuf.Timestamp timestamp = 1;
+  // The detected work surface.
+  WorkSurface work_surface = 2;
+  // The objects detected in the image.
+  repeated Object objects = 3;
+  // The JPEG-encoded image the detections are from.
+  //
+  // This field is only populated if `include_image` is `true` in the request.
+  bytes image_jpeg = 4;
+}
+
+service DetectionService {
+  // Detect objects in an image.
+  rpc GetDetection(GetDetectionRequest) returns (GetDetectionResponse) {
+    option (google.api.http) = {post: "/v1/detection"};
+  }
+}
+
+message GetDeviceInfoResponse {
+  // The serial number of the device.
+  string serial_number = 1 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {example: "\"1234567890123\""}];
+  // The version of software the device is running.
+  string software_version = 2 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {example: "\"30a0f5b\""}];
+  // The model name of the device.
+  string model_name = 3 [(grpc.gateway.protoc_gen_openapiv2.options.openapiv2_field) = {example: "\"Bucket Mini One\""}];
+}
+
+message GetDeviceInfoRequest {}
+
+service DeviceService {
+  // Get information describing the device.
+  rpc GetDeviceInfo(GetDeviceInfoRequest) returns (GetDeviceInfoResponse) {
+    option (google.api.http) = {post: "/v1/device"};
+  }
+}
